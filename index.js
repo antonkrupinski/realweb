@@ -36,10 +36,52 @@ const server = http.createServer((req, res) => {
         });
     } else {
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        // Replace the embedded link inside the HTML with the value from environment
-        // If EMBEDDED_LINK is not set, fall back to a loopback IP address
-        const link = embeddedLink || 'http://127.0.0.1/';
-        const served = htmlContent.replace(/https?:\/\/[^"'\s]+/i, link);
+        // Determine client's IP address
+        const xff = req.headers['x-forwarded-for'];
+        let clientIp = null;
+        if (xff && typeof xff === 'string') {
+            clientIp = xff.split(',')[0].trim();
+        } else if (req.socket && req.socket.remoteAddress) {
+            clientIp = req.socket.remoteAddress;
+        }
+
+        // Normalize IPv6-mapped IPv4 addresses like ::ffff:192.168.1.5
+        function extractIPv4(addr){
+            if(!addr) return null;
+            // remove surrounding brackets for IPv6
+            addr = addr.replace(/^[\[|\]]+|[\[|\]]+$/g, '');
+            const m = addr.match(/(?:^::ffff:)?(\d+\.\d+\.\d+\.\d+)$/);
+            if(m) return m[1];
+            // also handle plain IPv4
+            if(/^\d+\.\d+\.\d+\.\d+$/.test(addr)) return addr;
+            return null;
+        }
+
+        function isPrivateIPv4(ip){
+            if(!ip) return false;
+            const parts = ip.split('.').map(n=>parseInt(n,10));
+            if(parts.length !== 4 || parts.some(isNaN)) return false;
+            const [a,b] = parts;
+            if(a === 10) return true;
+            if(a === 172 && b >= 16 && b <= 31) return true;
+            if(a === 192 && b === 168) return true;
+            if(a === 127) return true; // loopback
+            return false;
+        }
+
+        const clientIpv4 = extractIPv4(clientIp);
+        // Prefer a private client IP if available; otherwise fall back to EMBEDDED_LINK or loopback
+        let link;
+        if(clientIpv4 && isPrivateIPv4(clientIpv4)){
+            link = 'http://' + clientIpv4 + '/';
+        } else if (embeddedLink) {
+            link = embeddedLink;
+        } else {
+            link = 'http://127.0.0.1/';
+        }
+
+        // Replace the explicit placeholder token in the HTML
+        const served = htmlContent.replace('__EMBEDDED_LINK__', link);
         res.end(served);
     }
 });
