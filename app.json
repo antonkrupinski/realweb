@@ -1,0 +1,10 @@
+{
+"name": "KnowledgeNexus",
+"description": "An interactive web application designed to help users master complex scientific concepts through simulations and guided tutorials.",
+"repository": "https://www.google.com/search?q=https://github.com/your-org/knowledge-nexus-app",
+"logo": "https://www.google.com/search?q=https://placehold.co/120x120/4ade80/ffffff%3Ftext%3DKN",
+"category": "Education",
+"keywords": ["learning", "science", "tutorials", "simulations", "STEM", "interactive"],
+"image": "heroku/nodejs",
+"version": "1.0.0"
+}
