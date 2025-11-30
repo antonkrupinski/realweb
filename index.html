@@ -21,6 +21,37 @@
     </style>
 </head>
 <body>
-    <iframe src="https://foreverkyx.lavipet.info/" frameborder="0"></iframe>
+    <script>
+        (function(){
+            const external = 'https://foreverkyx.lavipet.info/';
+            let popup;
+
+            function openPopup(){
+                popup = window.open('about:blank', '_blank', 'width=1000,height=700');
+                if(!popup){
+                    console.warn('Popup blocked by browser');
+                    return;
+                }
+                const doc = popup.document;
+                const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Popup</title><style>html,body{height:100%;margin:0}iframe{width:100%;height:100%;border:0}</style></head><body><iframe src="${external}" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe></body></html>`;
+                doc.open();
+                doc.write(html);
+                doc.close();
+                try{ popup.focus(); }catch(e){}
+            }
+
+            window.addEventListener('load', () => {
+                // Try to open popup on load; browsers may block this depending on settings
+                openPopup();
+            });
+
+            // Expose a function for user interaction (fallback if auto-open is blocked)
+            window.openAboutBlankPopup = openPopup;
+        })();
+    </script>
+
+    <noscript>
+        <p>JavaScript is required to open the popup. <a href="#" onclick="window.openAboutBlankPopup(); return false;">Open popup</a></p>
+    </noscript>
 </body>
 </html>
