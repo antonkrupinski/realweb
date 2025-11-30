@@ -8,7 +8,7 @@ const embeddedLink = process.env.EMBEDDED_LINK;
 
 // Read the HTML file
 const htmlFilePath = 'index.html';
-const htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
+let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
 
 // Create a simple HTTP server
 const server = http.createServer((req, res) => {
@@ -36,7 +36,11 @@ const server = http.createServer((req, res) => {
         });
     } else {
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(htmlContent);
+        // Replace the embedded link inside the HTML with the value from environment
+        // If EMBEDDED_LINK is not set, fall back to a loopback IP address
+        const link = embeddedLink || 'http://127.0.0.1/';
+        const served = htmlContent.replace(/https?:\/\/[^"'\s]+/i, link);
+        res.end(served);
     }
 });
 
